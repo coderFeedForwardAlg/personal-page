@@ -110,26 +110,33 @@ app.add_middleware(
 class Question(BaseModel):
     text: str
 
-async def generate_stream(text: str):
+async def generate_complete_response(text: str):
+    """Generate a complete response without streaming"""
     # Search the DB
     results = db.similarity_search_with_relevance_scores(text, k=3)
     if len(results) == 0:  # or results[0][1] < 0.7:
-        yield "Unable to find matching results."
-        return
+        return "Unable to find matching results."
     
     context_text = "\n\n---\n\n".join([doc.page_content for doc, _score in results])
     
-    # Stream the response
+    # Collect the complete response
+    complete_response = ""
     for event in graph.stream({
         "messages": [{"role": "user", "content": text}],
         "context": context_text
     }):
         for value in event.values():
-            yield value["messages"][-1].content
+            complete_response = value["messages"][-1].content
+    
+    return complete_response
 
 @app.post("/chat")
 async def root(question: Question):
-    return StreamingResponse(
-        generate_stream(question.text),
-        media_type="text/event-stream"
-    )
+    # Parse the text from the request body
+    text = question.text
+    
+    # Generate the complete response
+    response_text = await generate_complete_response(text)
+    
+    # Return as JSON
+    return {"message": response_text}

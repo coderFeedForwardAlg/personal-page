@@ -92,6 +92,7 @@ def stream_graph_updates(user_input: str):
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 
@@ -109,9 +110,26 @@ app.add_middleware(
 class Question(BaseModel):
     text: str
 
+async def generate_stream(text: str):
+    # Search the DB
+    results = db.similarity_search_with_relevance_scores(text, k=3)
+    if len(results) == 0:  # or results[0][1] < 0.7:
+        yield "Unable to find matching results."
+        return
+    
+    context_text = "\n\n---\n\n".join([doc.page_content for doc, _score in results])
+    
+    # Stream the response
+    for event in graph.stream({
+        "messages": [{"role": "user", "content": text}],
+        "context": context_text
+    }):
+        for value in event.values():
+            yield value["messages"][-1].content
+
 @app.post("/chat")
 async def root(question: Question):
-    respons = stream_graph_updates(question.text)
-    return {"message": respons}
-
-# TODO stream respons with api
+    return StreamingResponse(
+        generate_stream(question.text),
+        media_type="text/event-stream"
+    )

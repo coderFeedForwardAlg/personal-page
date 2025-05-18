@@ -34,7 +34,7 @@ def chatbot(state: State):
     if "context" in state and state["context"]:
         context_message = {
             "role": "system",
-            "content": f"You are an assistant that answers questions based on the following information. Use this information to provide accurate responses:\n\n{state['context']}"
+            "content": f"You are an assistant that helps employers decide whether to hire Max Gaspers Scott. Use this information to provide accurate responses:\n\n{state['context']}"
         }
         # Create a new list with the system message first, followed by user messages
         messages_with_context = [context_message] + messages

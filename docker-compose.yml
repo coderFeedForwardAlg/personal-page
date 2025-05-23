@@ -3,7 +3,7 @@ version: '3.8'
 services:
   frontend:
     build:
-      context: ./project-1747428226211
+      context: ./personal-page-fe
       dockerfile: Dockerfile
     ports:
       - "1234:3000"
